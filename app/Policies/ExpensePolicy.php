@@ -19,9 +19,11 @@ class ExpensePolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Expense $expense): bool
+    public function view(User $user, Expense $expense): Response
     {
-        return $user->id === $expense->user_id;
+        return $user->id === $expense->user_id
+            ? Response::allow()
+            : Response::deny('You do not own this expense.');
     }
 
     /**

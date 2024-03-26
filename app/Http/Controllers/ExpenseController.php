@@ -2,95 +2,176 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Expense;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class ExpenseController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the expenses.
+     *
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    /**
+     * @OA\Get(
+     *     path="/api/expenses",
+     *     tags={"expenses"},
+     *     summary="Get all expenses",
+     *     description="Retrieve a list of all expenses",
+     *     @OA\Response(response="200", description="List of expenses"),
+     *     @OA\Response(response="404", description="No expense found")
+     * )
+     */
+    public function index(Request $request)
     {
-        /* $expenses = Auth::user()->expenses()->get(); */
         
-        return response()->json(['status' => 'success', 'expenses' => $expenses], 200);
+        $expenses = Expense::where('user_id', $request->user()->id)->get();
+        return response()->json($expenses);
     }
+    
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created expense in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    /**
+     * @OA\Post(
+     *     path="/api/expenses",
+     *     tags={"expenses"},
+     *     summary="Create a new expense",
+     *     description="Create a new expense with provided name and age",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"description", "amount"},
+     *             @OA\Property(property="description", type="string"),
+     *             @OA\Property(property="amount", type="integer")
+     *         )
+     *     ),
+     *     @OA\Response(response="201", description="expense created"),
+     *     @OA\Response(response="400", description="Bad request")
+     * )
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
+        $request->validate([
             'description' => 'required|string',
             'amount' => 'required|numeric',
         ]);
 
-        $expense = new Expense;
-        $expense->description = $validatedData['description'];
-        $expense->amount = $validatedData['amount'];
-        $expense->user_id = Auth::id();
+        $expense = new Expense();
+        $expense->user_id = $request->user()->id;
+        $expense->description = $request->description;
+        $expense->amount = $request->amount;
         $expense->save();
 
-        return response()->json(['status' => 'success', 'expense' => $expense], 201);
+        return response()->json($expense, 201);
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified expense.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function show($id)
+    /**
+     * @OA\Get(
+     *     path="/api/expenses/{id}",
+     *     tags={"expenses"},
+     *     summary="Get a expense by ID",
+     *     description="Retrieve a expense by its ID",
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the expense to retrieve",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(response="200", description="Expense found"),
+     *     @OA\Response(response="404", description="Expense not found")
+     * )
+     */
+    public function show(Request $request, $id)
     {
-        $expense = Auth::user()->expenses()->find($id);
-
-        if (!$expense) {
-            return response()->json(['status' => 'error', 'message' => 'Expense not found'], 404);
+        
+        $expense = Expense::findOrFail($id);
+        /* if (! Gate::allows('view',$expense)) {
+            abort(403);
+        } */
+        if ($request->user()->cannot('view', $expense)) {
+            abort(403);
         }
 
-        return response()->json(['status' => 'success', 'expense' => $expense], 200);
+        if ($expense->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return response()->json($expense);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified expense in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'description' => 'string',
-            'amount' => 'numeric',
+        $request->validate([
+            'description' => 'required|string',
+            'amount' => 'required|numeric',
         ]);
 
-        $expense = Auth::user()->expenses()->find($id);
+        $expense = Expense::findOrFail($id);
 
-        if (!$expense) {
-            return response()->json(['status' => 'error', 'message' => 'Expense not found'], 404);
+        if ($expense->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        if (isset($validatedData['description'])) {
-            $expense->description = $validatedData['description'];
-        }
-
-        if (isset($validatedData['amount'])) {
-            $expense->amount = $validatedData['amount'];
-        }
-
+        $expense->description = $request->description;
+        $expense->amount = $request->amount;
         $expense->save();
 
-        return response()->json(['status' => 'success', 'expense' => $expense], 200);
+        return response()->json($expense);
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified expense from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function destroy($id)
+    /**
+     * @OA\Delete(
+     *     path="/api/expenses/{id}",
+     *     tags={"expenses"},
+     *     summary="Delete an expense",
+     *     description="Delete an expense by its ID",
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID of the expense to delete",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(response="204", description="Expense deleted"),
+     *     @OA\Response(response="404", description="Expense not found")
+     * )
+     */
+    public function destroy(Request $request, $id)
     {
-        $expense = Auth::user()->expenses()->find($id);
+        $expense = Expense::findOrFail($id);
 
-        if (!$expense) {
-            return response()->json(['status' => 'error', 'message' => 'Expense not found'], 404);
+        if ($expense->user_id !== $request->user()->id) {
+            return response()->json(['error' => 'Unauthorized'], 401);
         }
 
         $expense->delete();
 
-        return response()->json(['status' => 'success', 'message' => 'Expense deleted successfully'], 200);
+        return response()->json(null, 204);
     }
 }

@@ -1,0 +1,122 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Student API",
+        "description": "API to manage students",
+        "version": "1.0.0"
+    },
+    "paths": {
+        "/api/expenses": {
+            "get": {
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Get all expenses",
+                "description": "Retrieve a list of all expenses",
+                "operationId": "9b702aa9314d471a9de3a121e5183c88",
+                "responses": {
+                    "200": {
+                        "description": "List of expenses"
+                    },
+                    "404": {
+                        "description": "No expense found"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Create a new expense",
+                "description": "Create a new expense with provided name and age",
+                "operationId": "a764a04e6d047ab02a68f06c706e67f3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "description",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "amount": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "expense created"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    }
+                }
+            }
+        },
+        "/api/expenses/{id}": {
+            "get": {
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Get a expense by ID",
+                "description": "Retrieve a expense by its ID",
+                "operationId": "97128dceb5c799772eef314ba1b9b045",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the expense to retrieve",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Expense found"
+                    },
+                    "404": {
+                        "description": "Expense not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "expenses"
+                ],
+                "summary": "Delete an expense",
+                "description": "Delete an expense by its ID",
+                "operationId": "68ebff62f3bfb2213565253975db2c52",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID of the expense to delete",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Expense deleted"
+                    },
+                    "404": {
+                        "description": "Expense not found"
+                    }
+                }
+            }
+        }
+    }
+}
