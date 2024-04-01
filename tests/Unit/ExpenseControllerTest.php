@@ -10,7 +10,6 @@ use Tests\TestCase;
 class ExpenseControllerTest extends TestCase
 {
     use RefreshDatabase;
-
     /**
      * A basic test example.
      */

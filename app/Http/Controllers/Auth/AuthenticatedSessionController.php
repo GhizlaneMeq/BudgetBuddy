@@ -28,9 +28,9 @@ class AuthenticatedSessionController extends Controller
             ]);
         }
 
-        throw ValidationException::withMessages([
+        /* throw ValidationException::withMessages([
             'email' => ['The provided credentials are incorrect.'],
-        ]);
+        ]); */
     }
 
 

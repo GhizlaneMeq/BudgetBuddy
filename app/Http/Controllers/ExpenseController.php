@@ -5,7 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-
+/**
+ 
+* @OA\Info(
+* title="Student API",
+* version="1.0.0",
+* description="API to manage students",
+* )
+*/
 class ExpenseController extends Controller
 {
     /**
@@ -19,13 +26,13 @@ class ExpenseController extends Controller
      *     tags={"expenses"},
      *     summary="Get all expenses",
      *     description="Retrieve a list of all expenses",
+     *     security={{"sanctum": {}}},
      *     @OA\Response(response="200", description="List of expenses"),
      *     @OA\Response(response="404", description="No expense found")
      * )
      */
     public function index(Request $request)
     {
-        
         $expenses = Expense::where('user_id', $request->user()->id)->get();
         return response()->json($expenses);
     }
@@ -96,21 +103,19 @@ class ExpenseController extends Controller
      */
     public function show(Request $request, $id)
     {
-        
-        $expense = Expense::findOrFail($id);
-        /* if (! Gate::allows('view',$expense)) {
-            abort(403);
-        } */
-        if ($request->user()->cannot('view', $expense)) {
-            abort(403);
-        }
+        try {
+            $expense = Expense::findOrFail($id);
 
-        if ($expense->user_id !== $request->user()->id) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
+            if ($request->user()->cannot('view', $expense)) {
+                abort(403);
+            }
 
-        return response()->json($expense);
+            return response()->json($expense);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Expense not found'], 404);
+        }
     }
+
 
     /**
      * Update the specified expense in storage.
@@ -121,22 +126,26 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'description' => 'required|string',
-            'amount' => 'required|numeric',
-        ]);
+        try {
+            $request->validate([
+                'description' => 'required|string',
+                'amount' => 'required|numeric',
+            ]);
 
-        $expense = Expense::findOrFail($id);
+            $expense = Expense::findOrFail($id);
 
-        if ($expense->user_id !== $request->user()->id) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            if ($request->user()->cannot('update', $expense)) {
+                abort(403);
+            }
+
+            $expense->description = $request->description;
+            $expense->amount = $request->amount;
+            $expense->save();
+
+            return response()->json($expense);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Expense not found'], 404);
         }
-
-        $expense->description = $request->description;
-        $expense->amount = $request->amount;
-        $expense->save();
-
-        return response()->json($expense);
     }
 
     /**
@@ -164,14 +173,18 @@ class ExpenseController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $expense = Expense::findOrFail($id);
+        try {
+            $expense = Expense::findOrFail($id);
 
-        if ($expense->user_id !== $request->user()->id) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            if ($request->user()->cannot('delete', $expense)) {
+                abort(403);
+            }
+
+            $expense->delete();
+
+            return response()->json(null, 204);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Expense not found'], 404);
         }
-
-        $expense->delete();
-
-        return response()->json(null, 204);
     }
 }
